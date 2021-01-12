@@ -1,0 +1,9 @@
+apiVersion: constraints.gatekeeper.sh/v1beta1
+kind: K8sDeniedImageRegistries
+metadata:
+  name: pod-must-not-have-denied-registries
+spec:
+  match:
+    kinds:
+      - apiGroups: [""]
+        kinds: ["Pod"]

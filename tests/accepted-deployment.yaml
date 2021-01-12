@@ -1,0 +1,47 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: quarkus-api-pastry
+  labels:
+    app: quarkus-api-pastry
+    app.kubernetes.io/component: quarkus-api-pastry
+    app.kubernetes.io/instance: quarkus-api-pastry
+    app.kubernetes.io/part-of: quarkus-api-pastry
+    cmdb-id: de1a03d8-9904-4d1b-85e0-f94018ce47f8
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: quarkus-api-pastry
+  template:
+    metadata:
+      labels:
+        app: quarkus-api-pastry
+    spec:
+      containers:
+        - resources:
+            limits:
+              cpu: 250m
+              memory: 200Mi
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          terminationMessagePath: /dev/termination-log
+          name: quarkus-api-pastry
+          env:
+            - name: QUARKUS_PROFILE
+              value: kube
+          securityContext:
+            privileged: false
+          ports:
+            - name: http
+              containerPort: 8282
+              protocol: TCP
+          imagePullPolicy: Always
+          terminationMessagePolicy: File
+          image: 'quay.io/microcks/quarkus-api-pastry:0.1'
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      dnsPolicy: ClusterFirst
+      securityContext: {}
+      schedulerName: default-scheduler

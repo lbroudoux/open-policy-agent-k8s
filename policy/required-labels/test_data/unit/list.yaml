@@ -1,0 +1,16 @@
+---
+apiVersion: v1
+kind: List
+items:
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    name: deploymenthasrequiredlabels
+    labels:
+      cmdb-id: 3c03a014-1b74-4995-8e73-6e1bb3fbeed0
+  spec:
+    template:
+      spec:
+        containers:
+          - name: pastry
+            image: quay.io/microcks/quarkus-api-pastry:latest

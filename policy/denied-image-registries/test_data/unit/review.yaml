@@ -1,0 +1,14 @@
+review:
+  kind:
+    group: ""
+    kind: Pod
+    version: v1
+  object:
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: imageusesdeniedregistry
+    spec:
+      containers:
+        - name: pastry
+          image: hooli.com/microcks/quarkus-api-pastry:latest
