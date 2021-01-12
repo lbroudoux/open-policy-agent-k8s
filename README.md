@@ -274,3 +274,8 @@ Check how `konstraint` creates templates, constraints and documentation:
 konstraint create
 konstraint doc
 ```
+
+## Useful resources
+
+* OPA `kube-mgmt` to Gatekeeper evolution: https://www.infracloud.io/blogs/opa-and-gatekeeper/
+* RHACM Integration explanations: https://ms-my.facebook.com/openshift/videos/368277450940388/?t=1949
