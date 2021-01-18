@@ -1,0 +1,138 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: policy-denied-image-registries
+  annotations:
+    policy.open-cluster-management.io/categories: 'CA Security Assessment and Authorization'
+spec:
+  policy-templates:
+    - objectDefinition: 
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: policy-denied-image-registries-configuration
+        spec:
+          severity: high
+          namespaceSelector:
+            include: ["gatekeeper-system"]
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: templates.gatekeeper.sh/v1beta1
+                kind: ConstraintTemplate
+                metadata:
+                  name: k8sdeniedimageregistries
+                spec:
+                  crd:
+                    spec:
+                      names:
+                        kind: K8sDeniedImageRegistries
+                  targets:
+                    - target: admission.k8s.gatekeeper.sh
+                      rego: |-
+                        package denied_image_registries
+
+                        default is_gatekeeper = false
+
+                        # Checks whether the policy 'input' has came from Gatekeeper
+                        is_gatekeeper {
+                          has_field(input, "review")
+                          has_field(input.review, "object")
+                        }
+
+                        # Check the obj contains a field
+                        has_field(obj, field) {
+                          obj[field]
+                        }
+
+                        # Get the input, as the input is not Gatekeeper based
+                        object = input {
+                          not is_gatekeeper
+                        }
+
+                        # Get the input.review.object, as the input is Gatekeeper based
+                        object = input.review.object {
+                          is_gatekeeper
+                        }
+
+                        # Set the .kind of the object we are currently working on
+                        kind = object.kind
+
+                        violation[{"msg": msg}] {
+                          lower(kind) == "pod"
+                          some i
+                          image := object.spec.containers[i].image
+                          not startswith(image, "quay.io/")
+                          msg := sprintf("image '%v' comes from untrusted registry", [image])
+                          # msg := sprintf("REVIEW OBJECT: %v", [input.review])
+                        }
+          remediationAction: inform
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: policy-denied-image-registries-audit
+        spec:
+          severity: medium
+          namespaceSelector:
+            include: ["gatekeeper-system"]
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: constraints.gatekeeper.sh/v1beta1
+                kind: K8sDeniedImageRegistries
+                metadata:
+                  name: pod-must-not-have-denied-registries
+                spec:
+                  match:
+                    kinds:
+                      - apiGroups: [""]
+                        kinds: ["Pod"]
+                status:
+                  totalViolations: 0
+    - objectDefinition:
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: policy-denied-image-registries-admission
+        spec:
+          severity: low
+          object-templates:
+            - complianceType: mustnothave
+              objectDefinition:
+                apiVersion: v1
+                kind: Event
+                metadata:
+                  namespace: gatekeeper-system
+                  annotations:
+                    constraint_action: deny
+                    constraint_kind: K8sDeniedImageRegistries
+                    constraint_name: pod-must-not-have-denied-registries
+                    event_type: violation
+  remediationAction: inform
+  disabled: false
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: binding-policy-denied-image-registries
+placementRef:
+  name: placement-policy-denied-image-registries
+  kind: PlacementRule
+  apiGroup: apps.open-cluster-management.io
+subjects:
+- name: policy-denied-image-registries
+  kind: Policy
+  apiGroup: policy.open-cluster-management.io
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: placement-policy-denied-image-registries
+spec:
+  clusterConditions:
+  - status: "True"
+    type: ManagedClusterConditionAvailable
+  clusterSelector:
+    matchExpressions:
+      - {key: environment, operator: In, values: ["dev"]}

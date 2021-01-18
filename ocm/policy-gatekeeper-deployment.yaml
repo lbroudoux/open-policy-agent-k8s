@@ -1,0 +1,77 @@
+apiVersion: policy.open-cluster-management.io/v1
+kind: Policy
+metadata:
+  name: policy-gatekeeper-deployment
+  annotations:
+    policy.open-cluster-management.io/categories: 'CM Configuration Management'
+spec:
+  policy-templates:
+    - objectDefinition: 
+        apiVersion: policy.open-cluster-management.io/v1
+        kind: ConfigurationPolicy
+        metadata:
+          name: policy-gatekeeper-deployment-configuration
+        spec:
+          severity: high
+          namespaceSelector:
+            include: ["gatekeeper-system"]
+          object-templates:
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: gatekeeper-audit
+                  labels:
+                    control-plane: controller-manager
+                    gatekeeper.sh/operation: audit
+                    gatekeeper.sh/system: 'yes'
+                spec:
+                  template:
+                    spec:
+                      containers:
+                        - name: manager
+                          image: 'openpolicyagent/gatekeeper:v3.2.2'
+            - complianceType: musthave
+              objectDefinition:
+                apiVersion: apps/v1
+                kind: Deployment
+                metadata:
+                  name: gatekeeper-controller-manager
+                  labels:
+                    control-plane: controller-manager
+                    gatekeeper.sh/operation: webhook
+                    gatekeeper.sh/system: 'yes'
+                spec:
+                  template:
+                    spec:
+                      containers:
+                        - name: manager
+                          image: 'openpolicyagent/gatekeeper:v3.2.2'
+  remediationAction: inform
+  disabled: false
+---
+apiVersion: policy.open-cluster-management.io/v1
+kind: PlacementBinding
+metadata:
+  name: binding-policy-gatekeeper-deployment
+placementRef:
+  name: placement-policy-gatekeeper-deployment
+  kind: PlacementRule
+  apiGroup: apps.open-cluster-management.io
+subjects:
+- name: policy-gatekeeper-deployment
+  kind: Policy
+  apiGroup: policy.open-cluster-management.io
+---
+apiVersion: apps.open-cluster-management.io/v1
+kind: PlacementRule
+metadata:
+  name: placement-policy-gatekeeper-deployment
+spec:
+  clusterConditions:
+  - status: "True"
+    type: ManagedClusterConditionAvailable
+  clusterSelector:
+    matchExpressions:
+      - {key: environment, operator: In, values: ["dev"]}
